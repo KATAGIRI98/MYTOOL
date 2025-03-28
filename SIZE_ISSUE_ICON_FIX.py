@@ -70,9 +70,23 @@ def load_valid_hexes():
     return valid_hexes
 
 # ---------------------------
+# Helper: Ask user for additional skin exclusions.
+# ---------------------------
+def get_user_exclusions():
+    response = input("Do you want to exclude any more skins apart from the ones present in the changelog? (y/n): ").strip().lower()
+    extra_exclusions = set()
+    if response == "y":
+        exclusion_input = input("Enter the skin name fragments separated by commas (e.g., camo,raven,pharaoh,jacket,shirt,face,hair): ")
+        extra_exclusions = {frag.strip().lower() for frag in exclusion_input.split(",") if frag.strip()}
+    return extra_exclusions
+
+# ---------------------------
 # Main Process
 # ---------------------------
 def process_changelog():
+    # Ask for additional exclusions from user.
+    extra_exclusions = get_user_exclusions()
+    
     # Read changelog file.
     changelog_path = os.path.join(REPACK_DIR, "changelog.txt")
     with open(changelog_path, "r", encoding="utf-8") as f:
@@ -123,16 +137,19 @@ def process_changelog():
             # Skip if the hex code is explicitly excluded.
             if hex_code in unified_exclusions:
                 continue
-            # Also skip if the skin name matches any name exclusion (case-insensitive substring check).
+            
             lower_skin_name = skin_name.lower()
             skip_by_name = False
-            for excl in group["name_exclusions"]:
+            # Combine exclusions from changelog and extra ones from the user.
+            combined_exclusions = group["name_exclusions"].union(extra_exclusions)
+            for excl in combined_exclusions:
                 if excl in lower_skin_name or lower_skin_name in excl:
                     skip_by_name = True
                     name_based_exclusions.setdefault(repack_filename, set()).add(skin_name)
                     break
             if skip_by_name:
                 continue
+            
             try:
                 hex_bytes = bytes.fromhex(hex_code)
             except ValueError:
@@ -199,3 +216,4 @@ def process_changelog():
     
 if __name__ == "__main__":
     process_changelog()
+        
